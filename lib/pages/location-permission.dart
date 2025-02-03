@@ -1,23 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:aps/pages/login.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:aps/pages/mapa-dashboard.dart';
 
 void main() {
-  runApp( MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Fire Sense App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: LoginScreen(), // Define a tela inicial aqui
-    );
-  }
+  runApp(MaterialApp(
+    home: LocationPermissionScreen(),
+  ));
 }
 
 class LocationPermissionScreen extends StatefulWidget {
@@ -86,4 +74,3 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
     );
   }
 }
-
