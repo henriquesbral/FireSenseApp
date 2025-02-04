@@ -6,39 +6,37 @@ import 'package:aps/pages/login.dart';
 void main() {
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
-    home: CadastroScreen(),
+    home: AlterarSenhaScreen(),
   ));
 }
 
-class CadastroScreen extends StatefulWidget {
+class AlterarSenhaScreen extends StatefulWidget {
   @override
-  _CadastroScreenState createState() => _CadastroScreenState();
+  _AlterarSenhaScreenState createState() => _AlterarSenhaScreenState();
 }
 
-class _CadastroScreenState extends State<CadastroScreen> {
+class _AlterarSenhaScreenState extends State<AlterarSenhaScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nomeController = TextEditingController();
-  final TextEditingController _sobrenomeController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController = TextEditingController();
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       String nome = _nomeController.text;
-      String sobrenome = _sobrenomeController.text;
       String senha = _senhaController.text;
 
-      Map<String, String> cadastroData = {
+      Map<String, String> loginData = {
         'nome': nome,
-        'sobrenome': sobrenome,
         'senha': senha
       };
-      String jsonBody = jsonEncode(cadastroData);
+      String jsonBody = jsonEncode(loginData);
 
-      bool isRegistered = await registerUser(jsonBody);
+      bool isAuthenticated = await authenticateUser(jsonBody);
 
-      if (isRegistered) {
+      if (isAuthenticated) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cadastro Realizado Com Sucesso')),
+          SnackBar(content: Text('Senha Alterada Com Sucesso')),
         );
         Navigator.pushReplacement(
           context,
@@ -46,14 +44,14 @@ class _CadastroScreenState extends State<CadastroScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro interno ao cadastrar')),
+          SnackBar(content: Text('Erro interno ao alterar a senha')),
         );
       }
     }
   }
 
-  Future<bool> registerUser(String jsonBody) async {
-    final url = Uri.parse('http://localhost:5018/api/Usuario/Adicionar');
+  Future<bool> authenticateUser(String jsonBody) async {
+    final url = Uri.parse('http://localhost:5018/api/Usuario/AlterarSenha');
     final headers = {'Content-Type': 'application/json'};
 
     try {
@@ -101,12 +99,12 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    "Cadastro",
+                    "Alterar Senha",
                     style: TextStyle(color: Colors.white, fontSize: 40),
                   ),
                   SizedBox(height: 10),
                   Text(
-                    "Crie sua conta preenchendo os campos abaixo",
+                    "Digite suas credenciais para alterar sua senha",
                     style: TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ],
@@ -155,7 +153,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                                   child: TextFormField(
                                     controller: _nomeController,
                                     decoration: InputDecoration(
-                                      hintText: "Nome",
+                                      hintText: "Usuário",
                                       hintStyle: TextStyle(color: Colors.grey),
                                       border: InputBorder.none,
                                     ),
@@ -175,15 +173,18 @@ class _CadastroScreenState extends State<CadastroScreen> {
                                     ),
                                   ),
                                   child: TextFormField(
-                                    controller: _sobrenomeController,
+                                    controller: _senhaController,
+                                    obscureText: true,
                                     decoration: InputDecoration(
-                                      hintText: "Sobrenome",
+                                      hintText: "Nova Senha",
                                       hintStyle: TextStyle(color: Colors.grey),
                                       border: InputBorder.none,
                                     ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
-                                        return 'Por favor, insira seu sobrenome';
+                                        return 'Por favor, insira a nova senha';
+                                      } else if (value.length < 6) {
+                                        return 'A senha deve ter pelo menos 6 caracteres';
                                       }
                                       return null;
                                     },
@@ -192,18 +193,18 @@ class _CadastroScreenState extends State<CadastroScreen> {
                                 Container(
                                   padding: EdgeInsets.all(10),
                                   child: TextFormField(
-                                    controller: _senhaController,
+                                    controller: _confirmarSenhaController,
                                     obscureText: true,
                                     decoration: InputDecoration(
-                                      hintText: "Senha",
+                                      hintText: "Confirmação Senha",
                                       hintStyle: TextStyle(color: Colors.grey),
                                       border: InputBorder.none,
                                     ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
-                                        return 'Por favor, insira sua senha';
-                                      } else if (value.length < 6) {
-                                        return 'A senha deve ter pelo menos 6 caracteres';
+                                        return 'Por favor, confirme sua senha';
+                                      } else if (value != _senhaController.text) {
+                                        return 'As senhas não coincidem';
                                       }
                                       return null;
                                     },
@@ -216,13 +217,13 @@ class _CadastroScreenState extends State<CadastroScreen> {
                           MaterialButton(
                             onPressed: _submitForm,
                             height: 50,
-                            color: Colors.green,
+                            color: Colors.orange[900],
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(50),
                             ),
                             child: Center(
                               child: Text(
-                                "Cadastrar",
+                                "Alterar Senha",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -241,7 +242,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                               );
                             },
                             child: Text(
-                              "Já tem uma conta? Faça login aqui",
+                              "Realizar Login",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.grey,
