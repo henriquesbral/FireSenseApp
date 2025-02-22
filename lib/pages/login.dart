@@ -1,6 +1,7 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:aps/pages/alterar-senha.dart';
 import 'package:aps/pages/cadastro.dart';
+import 'package:aps/model/usuario.dart';
 import 'package:aps/pages/mapa-dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -48,53 +49,59 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (_usuarioController.text.isEmpty || _senhaController.text.isEmpty) {
-      setState(() {
-        _errorMessage = "Usuário e senha são obrigatórios!";
-      });
-      return;
-    }
-
+  if (_usuarioController.text.isEmpty || _senhaController.text.isEmpty) {
     setState(() {
-      _isLoading = true;
+      _errorMessage = "Usuário e senha são obrigatórios!";
     });
-
-    const String apiUrl =
-        'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/auth';
-
-    Map<String, String> requestBody = {
-      'usuario': _usuarioController.text,
-      'senha': _senhaController.text,
-    };
-
-    try {
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
-      );
-
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        String token = data['token'];
-
-        await StorageService.saveToken(token);
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => MapScreen()),
-        );
-      } else {
-        _showSnackBar('Falha na autenticação. Verifique suas credenciais.');
-      }
-    } catch (e) {
-      _showSnackBar('Erro ao conectar ao servidor.');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    return;
   }
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  const String apiUrl =
+      'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/auth';
+
+  Map<String, String> requestBody = {
+    'usuario': _usuarioController.text,
+    'senha': _senhaController.text,
+  };
+
+  try {
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200) {
+      var data = jsonDecode(response.body);
+      
+      // Salva o token
+      await StorageService.saveToken(data['token']);
+
+      // Atualiza o usuarioAtual com os dados recebidos
+      setState(() {
+        usuarioAtual = Usuario.fromJson(data);
+      });
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => MapScreen()),
+      );
+    } else {
+      _showSnackBar('Falha na autenticação. Verifique suas credenciais.');
+    }
+  } catch (e) {
+    _showSnackBar('Erro ao conectar ao servidor.');
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
+
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(

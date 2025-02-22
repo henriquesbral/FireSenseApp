@@ -3,6 +3,7 @@ class Usuario {
   final int codPerfil;
   final String login;
   final bool ativo;
+  final String token;
   final List<String> permissoes;
 
   Usuario({
@@ -10,6 +11,7 @@ class Usuario {
     required this.codPerfil,
     required this.login,
     required this.ativo,
+    required this.token,
   }) : permissoes = getPermissoes(codPerfil);
 
   // Define permissões com base no código do perfil
@@ -27,8 +29,9 @@ class Usuario {
     return Usuario(
       nome: json['nome'],
       codPerfil: json['codPerfil'],
-      login: json['login'],
-      ativo: json['ativo']
+      login: json['usuario'], // A API retorna 'usuario' como login
+      ativo: json['ativo'],
+      token: json['token'],
     );
   }
 
@@ -39,15 +42,11 @@ class Usuario {
       'codPerfil': codPerfil,
       'login': login,
       'ativo': ativo,
+      'token': token,
       'permissoes': permissoes,
     };
   }
 }
 
-// Exemplo de inicialização do usuário
-Usuario usuarioAtual = Usuario(
-  nome: "João",
-  codPerfil: 1, // Administrador
-  login: "Carlos.Sobral",
-  ativo: true
-);
+// Inicialização vazia para evitar erro antes do login
+late Usuario usuarioAtual;
