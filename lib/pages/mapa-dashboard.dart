@@ -26,13 +26,9 @@ class _MapScreenState extends State<MapScreen> {
   final Set<Marker> _markers = {};
   final LatLng _initialPosition = LatLng(-23.5505, -46.6333);
   Map<String, dynamic>? _locationData;
+  bool _locationCaptured = false;
 
-  final List<String> _alertTypes = [
-    'Preventivo',
-    'Atenção',
-    'Emergência',
-    'Crítico'
-  ];
+  final List<String> _alertTypes = ['Preventivo', 'Atenção', 'Emergência', 'Crítico'];
   String _selectedAlertType = 'Preventivo';
 
   final Map<String, Color> _alertColors = {
@@ -83,7 +79,7 @@ class _MapScreenState extends State<MapScreen> {
       );
 
       _locationData = {
-        'StatusAlerta': 'Ativo',
+        'StatusAlerta': _selectedAlertType,
         'Latitude': position.latitude.toString(),
         'Longitude': position.longitude.toString(),
         'Cidade': 'São Paulo',
@@ -91,9 +87,107 @@ class _MapScreenState extends State<MapScreen> {
         'Endereco': 'Rua Exemplo, 123',
         'Bairro': 'Centro',
         'NomeLocalizacao': 'Local Atual',
-        'Usuario': usuarioAtual.nome,
+        'Usuario': usuarioAtual.usuario,
       };
+
+      _locationCaptured = true;
     });
+  }
+
+  void _showAlertTypeSelection() {
+    if (!_locationCaptured) {
+      _showSnackBar('Por favor, capture a localização antes de continuar.');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: _alertColors[_selectedAlertType],
+              title: Text(
+                "Selecione o Tipo de Alerta",
+                style: TextStyle(color: Colors.white),
+              ),
+              content: DropdownButton<String>(
+                value: _selectedAlertType,
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedAlertType = newValue;
+                      _locationData!['StatusAlerta'] = _selectedAlertType;
+                    });
+                    setStateDialog(() {});
+                  }
+                },
+                items: _alertTypes.map((String alertType) {
+                  return DropdownMenuItem<String>(
+                    value: alertType,
+                    child: Text(alertType),
+                  );
+                }).toList(),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("Cancelar", style: TextStyle(color: Colors.white)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showConfirmDialog();
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                  child: Text(
+                    "Confirmar",
+                    style: TextStyle(color: _alertColors[_selectedAlertType]),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showConfirmDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _alertColors[_selectedAlertType],
+        title: Text("Confirmar Localização", style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Cidade: ${_locationData!['Cidade']}", style: TextStyle(color: Colors.white)),
+            Text("Estado: ${_locationData!['Estado']}", style: TextStyle(color: Colors.white)),
+            Text("Endereço: ${_locationData!['Endereco']}", style: TextStyle(color: Colors.white)),
+            Text("Bairro: ${_locationData!['Bairro']}", style: TextStyle(color: Colors.white)),
+            Text("Latitude: ${_locationData!['Latitude']}", style: TextStyle(color: Colors.white)),
+            Text("Longitude: ${_locationData!['Longitude']}", style: TextStyle(color: Colors.white)),
+            Text("Status do Alerta: ${_locationData!['StatusAlerta']}", style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancelar", style: TextStyle(color: Colors.white)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _sendLocationToAPI();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+            child: Text("Confirmar e Enviar", style: TextStyle(color: _alertColors[_selectedAlertType])),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _sendLocationToAPI() async {
@@ -121,146 +215,20 @@ class _MapScreenState extends State<MapScreen> {
         body: jsonEncode(_locationData),
       );
 
-      print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         _showSnackBar('Alerta enviado com sucesso!');
-      } else if (response.statusCode == 401) {
-        _showSnackBar('Sessão expirada. Faça login novamente.');
-        await StorageService.clearToken();
       } else {
         _showSnackBar('Erro ao enviar alerta: ${response.body}');
       }
     } catch (e) {
-      print('Erro ao enviar alerta: $e');
       _showSnackBar('Falha na conexão com o servidor.');
     }
-  }
-
-  void _showAlertTypeSelection() {
-    if (_locationData == null) {
-      _showSnackBar(
-          'Localização não disponível. Pressione o botão de localização primeiro.');
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              backgroundColor: _alertColors[_selectedAlertType],
-              title: Text(
-                "Selecione o Tipo de Alerta",
-                style: TextStyle(color: Colors.white),
-              ),
-              content: DropdownButton<String>(
-                value: _selectedAlertType,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedAlertType =
-                          newValue; // Atualiza a seleção global
-                    });
-                    setStateDialog(() {}); // Atualiza a cor dentro do modal
-                  }
-                },
-                items: _alertTypes.map((String alertType) {
-                  return DropdownMenuItem<String>(
-                    value: alertType,
-                    child: Text(alertType),
-                  );
-                }).toList(),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child:
-                      Text("Cancelar", style: TextStyle(color: Colors.white)),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _locationData!['StatusAlerta'] = _selectedAlertType;
-                    Navigator.pop(context);
-                    _showConfirmDialog();
-                  },
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.white),
-                  child: Text(
-                    "Confirmar",
-                    style: TextStyle(color: _alertColors[_selectedAlertType]),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showConfirmDialog() {
-    if (_locationData == null) {
-      _showSnackBar(
-          'Localização não disponível. Pressione o botão de localização primeiro.');
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: _alertColors[_selectedAlertType],
-        title: Text("Confirmar Localização",
-            style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Cidade: ${_locationData!['Cidade']}",
-                style: TextStyle(color: Colors.white)),
-            Text("Estado: ${_locationData!['Estado']}",
-                style: TextStyle(color: Colors.white)),
-            Text("Endereço: ${_locationData!['Endereco']}",
-                style: TextStyle(color: Colors.white)),
-            Text("Bairro: ${_locationData!['Bairro']}",
-                style: TextStyle(color: Colors.white)),
-            Text("Latitude: ${_locationData!['Latitude']}",
-                style: TextStyle(color: Colors.white)),
-            Text("Longitude: ${_locationData!['Longitude']}",
-                style: TextStyle(color: Colors.white)),
-            Text("Status do Alerta: ${_locationData!['StatusAlerta']}",
-                style: TextStyle(color: Colors.white)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancelar", style: TextStyle(color: Colors.white)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _sendLocationToAPI();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-            child: Text("Confirmar e Enviar",
-                style: TextStyle(color: _alertColors[_selectedAlertType])),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
   }
 
   @override
@@ -270,7 +238,7 @@ class _MapScreenState extends State<MapScreen> {
       body: Stack(
         children: [
           GoogleMap(
-            onMapCreated: _onMapCreated,
+            onMapCreated: (controller) => _mapController = controller,
             initialCameraPosition: CameraPosition(
               target: _currentLocation ?? _initialPosition,
               zoom: 5,
@@ -283,7 +251,6 @@ class _MapScreenState extends State<MapScreen> {
             left: 10,
             right: 10,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 Expanded(
                   child: FloatingActionButton.extended(
@@ -293,13 +260,13 @@ class _MapScreenState extends State<MapScreen> {
                     backgroundColor: Colors.blueGrey,
                   ),
                 ),
-                SizedBox(width: 10), // Espaço entre os botões
+                SizedBox(width: 10),
                 Expanded(
                   child: FloatingActionButton.extended(
                     onPressed: _showAlertTypeSelection,
                     icon: Icon(Icons.send),
-                    label: Text("Enviar Alerta"),
-                    backgroundColor: _alertColors[_selectedAlertType],
+                    label: Text("Enviar Localização"),
+                    backgroundColor: Colors.green,
                   ),
                 ),
               ],

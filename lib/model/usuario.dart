@@ -1,52 +1,42 @@
 class Usuario {
+  final String usuario;
   final String nome;
-  final int codPerfil;
-  final String login;
+  final int perfil;
   final bool ativo;
-  final String token;
   final List<String> permissoes;
 
   Usuario({
+    required this.usuario,
     required this.nome,
-    required this.codPerfil,
-    required this.login,
+    required this.perfil,
     required this.ativo,
-    required this.token,
-  }) : permissoes = getPermissoes(codPerfil);
+  }) : permissoes = getPermissoes(perfil);
 
-  // Define permissões com base no código do perfil
-  static List<String> getPermissoes(int codPerfil) {
-    if (codPerfil == 1) {
-      return ["Mapa", "Perfil Usuario", "Alertas", "Lista Usuario"]; // Administrador
-    } else if (codPerfil == 2) {
-      return ["Mapa", "Alertas"]; // Usuário
-    }
-    return []; // Sem permissões caso o perfil não seja reconhecido
+  static List<String> getPermissoes(int perfil) {
+    return perfil == 1
+        ? ["Mapa", "Perfil Usuario", "Alertas", "Lista Usuario"] // Administrador
+        : ["Mapa", "Alertas"]; // Usuário
   }
 
-  // Construtor para criar um objeto a partir de um JSON
   factory Usuario.fromJson(Map<String, dynamic> json) {
     return Usuario(
+      usuario: json['login'],
       nome: json['nome'],
-      codPerfil: json['codPerfil'],
-      login: json['usuario'], // A API retorna 'usuario' como login
-      ativo: json['ativo'],
-      token: json['token'],
+      perfil: json['codPerfil'],
+      ativo: json['ativo'].toString().toLowerCase() == 'true', // Converte string para booleano
     );
   }
 
-  // Método para converter o objeto em JSON
   Map<String, dynamic> toJson() {
     return {
+      'usuario': usuario,
       'nome': nome,
-      'codPerfil': codPerfil,
-      'login': login,
+      'perfil': perfil,
       'ativo': ativo,
-      'token': token,
       'permissoes': permissoes,
     };
   }
 }
 
-// Inicialização vazia para evitar erro antes do login
+// Inicializa o usuário global
 late Usuario usuarioAtual;

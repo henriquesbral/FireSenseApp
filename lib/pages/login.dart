@@ -64,8 +64,8 @@ class _LoginScreenState extends State<LoginScreen> {
       'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/auth';
 
   Map<String, String> requestBody = {
-    'usuario': _usuarioController.text,
-    'senha': _senhaController.text,
+    'Usuario': _usuarioController.text,
+    'Senha': _senhaController.text,
   };
 
   try {

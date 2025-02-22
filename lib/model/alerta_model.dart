@@ -4,12 +4,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class Alerta {
-  final int codAlerta; // Adicionado CodAlerta
+  final int codAlerta;
   final String statusAlerta;
   final String cidade;
   final String bairro;
-  final double latitude;
-  final double longitude;
+  final String latitude;
+  final String longitude;
   final bool ativo;
 
   Alerta({
@@ -24,13 +24,14 @@ class Alerta {
 
   factory Alerta.fromJson(Map<String, dynamic> json) {
     return Alerta(
-      codAlerta: json['codAlerta'], // Adicionado CodAlerta na conversão
+      codAlerta: json['codAlerta'],
       statusAlerta: json['statusAlerta'],
       cidade: json['cidade'],
       bairro: json['bairro'],
-      latitude: json['latitude'].toDouble(),
-      longitude: json['longitude'].toDouble(),
-      ativo: json['ativo'],
+      latitude: json['latitude'],
+      longitude: json['longitude'],
+      ativo: json['ativo'] == 1, // Converte 1 para true e 0 para false
     );
   }
 }
+

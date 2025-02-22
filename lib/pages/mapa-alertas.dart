@@ -25,6 +25,13 @@ class _MapaAlertasState extends State<MapaAlertas> {
   final Set<Marker> _markers = {};
   final LatLng _initialPosition = LatLng(-23.5505, -46.6333); // São Paulo, Brasil
 
+  final Map<String, Color> _alertColors = {
+    'Preventivo': Colors.green,
+    'Atenção': Colors.yellow,
+    'Emergência': Colors.orange,
+    'Crítico': Colors.red,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +61,11 @@ class _MapaAlertasState extends State<MapaAlertas> {
       if (response.statusCode == 200) {
         List<dynamic> jsonList = json.decode(response.body);
         List<Alerta> alertas = jsonList.map((json) => Alerta.fromJson(json)).toList();
+
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(_initialPosition, 5),
+        );
+
         _addMarkers(alertas);
       } else {
         _showSnackBar('Erro ao carregar alertas.');
@@ -67,17 +79,16 @@ class _MapaAlertasState extends State<MapaAlertas> {
     Set<Marker> markers = {};
 
     for (var alerta in alertas) {
+      double lat = double.tryParse(alerta.latitude) ?? 0.0;
+      double lng = double.tryParse(alerta.longitude) ?? 0.0;
+
       markers.add(
         Marker(
-          markerId: MarkerId(alerta.codAlerta.toString()), // Usa o CodAlerta como ID único
-          position: LatLng(alerta.latitude, alerta.longitude),
+          markerId: MarkerId(alerta.codAlerta.toString()),
+          position: LatLng(lat, lng),
           icon: BitmapDescriptor.defaultMarkerWithHue(
               alerta.ativo ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed),
-          infoWindow: InfoWindow(
-            title: alerta.cidade,
-            snippet: alerta.bairro,
-            onTap: () => _mostrarDetalhes(alerta),
-          ),
+          onTap: () => _mostrarDetalhes(alerta, lat, lng),
         ),
       );
     }
@@ -88,28 +99,35 @@ class _MapaAlertasState extends State<MapaAlertas> {
     });
   }
 
-  void _mostrarDetalhes(Alerta alerta) {
+  void _mostrarDetalhes(Alerta alerta, double lat, double lng) {
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(lat, lng), 15),
+    );
+
+    Color alertColor = _alertColors[alerta.statusAlerta] ?? Colors.blueGrey;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Detalhes do Alerta"),
+        backgroundColor: alertColor,
+        title: Text("Detalhes do Alerta", style: TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("🆔 Código: ${alerta.codAlerta}"),
-            Text("🔴 Status: ${alerta.statusAlerta}"),
-            Text("🏙 Cidade: ${alerta.cidade}"),
-            Text("📍 Bairro: ${alerta.bairro}"),
-            Text("🌍 Latitude: ${alerta.latitude}"),
-            Text("🌍 Longitude: ${alerta.longitude}"),
-            Text("🟢 Ativo: ${alerta.ativo ? 'Sim' : 'Não'}"),
+            Text("🆔 Código: ${alerta.codAlerta}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            Text("🔴 Status: ${alerta.statusAlerta}", style: TextStyle(color: Colors.white)),
+            Text("🏙 Cidade: ${alerta.cidade}", style: TextStyle(color: Colors.white)),
+            Text("📍 Bairro: ${alerta.bairro}", style: TextStyle(color: Colors.white)),
+            Text("🌍 Latitude: ${alerta.latitude}", style: TextStyle(color: Colors.white)),
+            Text("🌍 Longitude: ${alerta.longitude}", style: TextStyle(color: Colors.white)),
+            Text("🟢 Ativo: ${alerta.ativo ? 'Sim' : 'Não'}", style: TextStyle(color: Colors.white)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Fechar"),
+            child: Text("Fechar", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

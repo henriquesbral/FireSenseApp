@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:aps/model/app-bar-rotas.dart';
 import 'package:aps/model/usuario.dart';
+import 'package:aps/model/lista-usuario-model.dart';
 import 'package:aps/pages/perfil-usuario.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -26,8 +27,7 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
   }
 
   void _verificarAcesso() {
-    if (widget.usuarioAtual.codPerfil != 1) {
-      // Se não for administrador, redireciona para a tela inicial
+    if (widget.usuarioAtual.perfil != 1) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -52,7 +52,7 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
     }
 
     try {
-      final response = await http.get(
+      final response = await http.post(
         Uri.parse(apiUrl),
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
       );
@@ -60,7 +60,7 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
       if (response.statusCode == 200) {
         List<dynamic> jsonResponse = jsonDecode(response.body);
         setState(() {
-          _usuarios = jsonResponse.map((user) => Usuario.fromJson(user)).toList();
+          _usuarios = ListaUsuarios.fromJson(jsonResponse).usuarios;
           _isLoading = false;
         });
       } else {
@@ -108,7 +108,7 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
                           color: usuario.ativo ? Colors.green : Colors.red,
                         ),
                         title: Text(usuario.nome),
-                        subtitle: Text(usuario.codPerfil == 1 ? "Administrador" : "Usuário"),
+                        subtitle: Text(usuario.perfil == 1 ? "Administrador" : "Usuário"),
                         trailing: Icon(Icons.arrow_forward_ios),
                         onTap: usuario.ativo ? () => _abrirPerfilUsuario(usuario) : null,
                       ),

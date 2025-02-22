@@ -25,8 +25,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
   void initState() {
     super.initState();
     _nomeController = TextEditingController(text: widget.usuario.nome);
-    _loginController = TextEditingController(text: widget.usuario.login);
-    _perfilDescricao = _getPerfilDescricao(widget.usuario.codPerfil);
+    _loginController = TextEditingController(text: widget.usuario.usuario);
+    _perfilDescricao = _getPerfilDescricao(widget.usuario.perfil);
   }
 
   /// Retorna a descrição do perfil com base no `codPerfil`
@@ -49,7 +49,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
       Map<String, dynamic> dadosAtualizados = {
         'nome': nome,
         'login': login,
-        'codPerfil': widget.usuario.codPerfil, // Mantendo o perfil inalterado
+        'codPerfil': widget.usuario.perfil, // Mantendo o perfil inalterado
       };
 
       final String apiUrl =
