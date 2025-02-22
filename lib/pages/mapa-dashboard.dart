@@ -7,7 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:aps/model/alerta_model.dart';
+import 'package:aps/services/storage_service.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -22,19 +22,30 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _mapController;
-  LatLng? _currentLocation; // Variável para armazenar a localização atual
-  final Set<Marker> _markers = {}; // Conjunto de marcadores no mapa
-  final LatLng _initialPosition = LatLng(-23.5505, -46.6333); // São Paulo, Brasil
+  LatLng? _currentLocation;
+  final Set<Marker> _markers = {};
+  final LatLng _initialPosition = LatLng(-23.5505, -46.6333);
+  Map<String, dynamic>? _locationData;
 
-  // Função para obter a localização atual
+  final List<String> _alertTypes = [
+    'Preventivo',
+    'Atenção',
+    'Emergência',
+    'Crítico'
+  ];
+  String _selectedAlertType = 'Preventivo';
+
+  final Map<String, Color> _alertColors = {
+    'Preventivo': Colors.green,
+    'Atenção': Colors.yellow,
+    'Emergência': Colors.orange,
+    'Crítico': Colors.red,
+  };
+
   Future<void> _getCurrentLocation() async {
-    // Verifica permissões de localização
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Por favor, habilite o serviço de localização.')),
-      );
+      _showSnackBar('Por favor, habilite o serviço de localização.');
       return;
     }
 
@@ -42,27 +53,20 @@ class _MapScreenState extends State<MapScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Permissão de localização negada.')),
-        );
+        _showSnackBar('Permissão de localização negada.');
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Permissão de localização negada permanentemente.')),
-      );
+      _showSnackBar('Permissão de localização negada permanentemente.');
       return;
     }
 
-    // Obtém a localização atual
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
 
-    // Atualiza a localização atual e o marcador no mapa
     setState(() {
       _currentLocation = LatLng(position.latitude, position.longitude);
       _markers.clear();
@@ -74,11 +78,185 @@ class _MapScreenState extends State<MapScreen> {
         ),
       );
 
-      // Move a câmera do mapa para a localização atual
       _mapController?.animateCamera(
         CameraUpdate.newLatLngZoom(_currentLocation!, 15),
       );
+
+      _locationData = {
+        'StatusAlerta': 'Ativo',
+        'Latitude': position.latitude.toString(),
+        'Longitude': position.longitude.toString(),
+        'Cidade': 'São Paulo',
+        'Estado': 'SP',
+        'Endereco': 'Rua Exemplo, 123',
+        'Bairro': 'Centro',
+        'NomeLocalizacao': 'Local Atual',
+        'Usuario': usuarioAtual.nome,
+      };
     });
+  }
+
+  Future<void> _sendLocationToAPI() async {
+    if (_locationData == null) {
+      _showSnackBar('Erro: Localização não foi capturada.');
+      return;
+    }
+
+    const String apiUrl =
+        'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/EnviarAlerta';
+
+    String? token = await StorageService.getToken();
+    if (token == null) {
+      _showSnackBar('Usuário não autenticado. Faça login novamente.');
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(_locationData),
+      );
+
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _showSnackBar('Alerta enviado com sucesso!');
+      } else if (response.statusCode == 401) {
+        _showSnackBar('Sessão expirada. Faça login novamente.');
+        await StorageService.clearToken();
+      } else {
+        _showSnackBar('Erro ao enviar alerta: ${response.body}');
+      }
+    } catch (e) {
+      print('Erro ao enviar alerta: $e');
+      _showSnackBar('Falha na conexão com o servidor.');
+    }
+  }
+
+  void _showAlertTypeSelection() {
+    if (_locationData == null) {
+      _showSnackBar(
+          'Localização não disponível. Pressione o botão de localização primeiro.');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: _alertColors[_selectedAlertType],
+              title: Text(
+                "Selecione o Tipo de Alerta",
+                style: TextStyle(color: Colors.white),
+              ),
+              content: DropdownButton<String>(
+                value: _selectedAlertType,
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedAlertType =
+                          newValue; // Atualiza a seleção global
+                    });
+                    setStateDialog(() {}); // Atualiza a cor dentro do modal
+                  }
+                },
+                items: _alertTypes.map((String alertType) {
+                  return DropdownMenuItem<String>(
+                    value: alertType,
+                    child: Text(alertType),
+                  );
+                }).toList(),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child:
+                      Text("Cancelar", style: TextStyle(color: Colors.white)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _locationData!['StatusAlerta'] = _selectedAlertType;
+                    Navigator.pop(context);
+                    _showConfirmDialog();
+                  },
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                  child: Text(
+                    "Confirmar",
+                    style: TextStyle(color: _alertColors[_selectedAlertType]),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showConfirmDialog() {
+    if (_locationData == null) {
+      _showSnackBar(
+          'Localização não disponível. Pressione o botão de localização primeiro.');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _alertColors[_selectedAlertType],
+        title: Text("Confirmar Localização",
+            style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Cidade: ${_locationData!['Cidade']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Estado: ${_locationData!['Estado']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Endereço: ${_locationData!['Endereco']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Bairro: ${_locationData!['Bairro']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Latitude: ${_locationData!['Latitude']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Longitude: ${_locationData!['Longitude']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Status do Alerta: ${_locationData!['StatusAlerta']}",
+                style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancelar", style: TextStyle(color: Colors.white)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _sendLocationToAPI();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+            child: Text("Confirmar e Enviar",
+                style: TextStyle(color: _alertColors[_selectedAlertType])),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -88,15 +266,13 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: MenuAppBar(usuario: usuarioAtual),
       body: Stack(
         children: [
           GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
-              target: _currentLocation ??
-                  _initialPosition, // Coordenadas padrão (São Paulo)
+              target: _currentLocation ?? _initialPosition,
               zoom: 5,
             ),
             mapType: MapType.hybrid,
@@ -104,10 +280,29 @@ class _MapScreenState extends State<MapScreen> {
           ),
           Positioned(
             bottom: 20,
-            left: 20,
-            child: FloatingActionButton(
-              onPressed: _getCurrentLocation,
-              child: Icon(Icons.my_location),
+            left: 10,
+            right: 10,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: FloatingActionButton.extended(
+                    onPressed: _getCurrentLocation,
+                    icon: Icon(Icons.my_location),
+                    label: Text("Capturar Localização"),
+                    backgroundColor: Colors.blueGrey,
+                  ),
+                ),
+                SizedBox(width: 10), // Espaço entre os botões
+                Expanded(
+                  child: FloatingActionButton.extended(
+                    onPressed: _showAlertTypeSelection,
+                    icon: Icon(Icons.send),
+                    label: Text("Enviar Alerta"),
+                    backgroundColor: _alertColors[_selectedAlertType],
+                  ),
+                ),
+              ],
             ),
           ),
         ],

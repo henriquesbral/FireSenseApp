@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:aps/pages/login.dart';
+import 'package:aps/services/storage_service.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -17,48 +18,69 @@ class AlterarSenhaScreen extends StatefulWidget {
 
 class _AlterarSenhaScreenState extends State<AlterarSenhaScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _usuarioController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
   final TextEditingController _confirmarSenhaController = TextEditingController();
+  bool _isLoading = false;
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      String nome = _nomeController.text;
-      String senha = _senhaController.text;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      Map<String, String> loginData = {
-        'nome': nome,
-        'senha': senha
-      };
-      String jsonBody = jsonEncode(loginData);
+    setState(() {
+      _isLoading = true;
+    });
 
-      bool isAuthenticated = await authenticateUser(jsonBody);
+    String usuario = _usuarioController.text;
+    String senha = _senhaController.text;
 
-      if (isAuthenticated) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Senha Alterada Com Sucesso')),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro interno ao alterar a senha')),
-        );
-      }
+    Map<String, String> requestBody = {
+      'usuario': usuario,
+      'novaSenha': senha
+    };
+
+    bool senhaAlterada = await _alterarSenha(requestBody);
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (senhaAlterada) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Senha Alterada Com Sucesso')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao alterar a senha. Tente novamente.')),
+      );
     }
   }
 
-  Future<bool> authenticateUser(String jsonBody) async {
-    final url = Uri.parse('http://localhost:5018/api/Usuario/AlterarSenha');
-    final headers = {'Content-Type': 'application/json'};
+  Future<bool> _alterarSenha(Map<String, String> requestBody) async {
+    const String apiUrl =
+        'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/Usuario/AlterarSenha';
+
+    String? token = await StorageService.getToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Usuário não autenticado. Faça login novamente.')),
+      );
+      return false;
+    }
 
     try {
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: jsonBody,
+      final response = await http.put(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
       );
 
       if (response.statusCode == 200) {
@@ -68,7 +90,7 @@ class _AlterarSenhaScreenState extends State<AlterarSenhaScreen> {
         return false;
       }
     } catch (e) {
-      print('Error: $e');
+      print('Erro ao alterar senha: $e');
       return false;
     }
   }
@@ -151,7 +173,7 @@ class _AlterarSenhaScreenState extends State<AlterarSenhaScreen> {
                                     ),
                                   ),
                                   child: TextFormField(
-                                    controller: _nomeController,
+                                    controller: _usuarioController,
                                     decoration: InputDecoration(
                                       hintText: "Usuário",
                                       hintStyle: TextStyle(color: Colors.grey),
@@ -159,7 +181,7 @@ class _AlterarSenhaScreenState extends State<AlterarSenhaScreen> {
                                     ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
-                                        return 'Por favor, insira seu nome';
+                                        return 'Por favor, insira seu usuário';
                                       }
                                       return null;
                                     },
@@ -214,23 +236,25 @@ class _AlterarSenhaScreenState extends State<AlterarSenhaScreen> {
                             ),
                           ),
                           SizedBox(height: 40),
-                          MaterialButton(
-                            onPressed: _submitForm,
-                            height: 50,
-                            color: Colors.orange[900],
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            child: Center(
-                              child: Text(
-                                "Alterar Senha",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                          _isLoading
+                              ? CircularProgressIndicator()
+                              : MaterialButton(
+                                  onPressed: _submitForm,
+                                  height: 50,
+                                  color: Colors.orange[900],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      "Alterar Senha",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
                           SizedBox(height: 20),
                           GestureDetector(
                             onTap: () {
@@ -243,7 +267,6 @@ class _AlterarSenhaScreenState extends State<AlterarSenhaScreen> {
                             },
                             child: Text(
                               "Realizar Login",
-                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.grey,
                                 decoration: TextDecoration.underline,

@@ -20,57 +20,81 @@ class _CadastroScreenState extends State<CadastroScreen> {
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _sobrenomeController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController = TextEditingController();
+
+  // Criando FocusNodes para monitorar quando o campo recebe/deseleciona foco
+  final FocusNode _nomeFocus = FocusNode();
+  final FocusNode _sobrenomeFocus = FocusNode();
+  final FocusNode _senhaFocus = FocusNode();
+  final FocusNode _confirmarSenhaFocus = FocusNode();
+
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupFocusListeners();
+  }
+
+  void _setupFocusListeners() {
+    _nomeFocus.addListener(() => setState(() {}));
+    _sobrenomeFocus.addListener(() => setState(() {}));
+    _senhaFocus.addListener(() => setState(() {}));
+    _confirmarSenhaFocus.addListener(() => setState(() {}));
+  }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      String nome = _nomeController.text;
-      String sobrenome = _sobrenomeController.text;
-      String senha = _senhaController.text;
+    if (!_formKey.currentState!.validate()) return;
 
-      Map<String, String> cadastroData = {
-        'nome': nome,
-        'sobrenome': sobrenome,
-        'senha': senha
-      };
-      String jsonBody = jsonEncode(cadastroData);
+    setState(() {
+      _isLoading = true;
+    });
 
-      bool isRegistered = await registerUser(jsonBody);
+    String nome = _nomeController.text;
+    String sobrenome = _sobrenomeController.text;
+    String senha = _senhaController.text;
 
-      if (isRegistered) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cadastro Realizado Com Sucesso')),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro interno ao cadastrar')),
-        );
-      }
+    Map<String, String> cadastroData = {
+      'nome': nome,
+      'sobrenome': sobrenome,
+      'senha': senha
+    };
+
+    bool isRegistered = await _registerUser(cadastroData);
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (isRegistered) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cadastro realizado com sucesso!')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao cadastrar. Tente novamente.')),
+      );
     }
   }
 
-  Future<bool> registerUser(String jsonBody) async {
-    final url = Uri.parse('http://localhost:5018/api/Usuario/Adicionar');
-    final headers = {'Content-Type': 'application/json'};
+  Future<bool> _registerUser(Map<String, String> cadastroData) async {
+    final url = Uri.parse(
+        'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/Usuario/Adicionar');
 
     try {
       final response = await http.post(
         url,
-        headers: headers,
-        body: jsonBody,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(cadastroData),
       );
 
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        return data['success'] == true;
-      } else {
-        return false;
-      }
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      print('Error: $e');
+      print('Erro ao cadastrar usuário: $e');
       return false;
     }
   }
@@ -131,105 +155,30 @@ class _CadastroScreenState extends State<CadastroScreen> {
                       child: Column(
                         children: <Widget>[
                           SizedBox(height: 60),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color.fromRGBO(225, 95, 27, .3),
-                                  blurRadius: 20,
-                                  offset: Offset(0, 10),
-                                )
-                              ],
-                            ),
-                            child: Column(
-                              children: <Widget>[
-                                Container(
-                                  padding: EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      bottom: BorderSide(color: Colors.grey.shade200),
-                                    ),
-                                  ),
-                                  child: TextFormField(
-                                    controller: _nomeController,
-                                    decoration: InputDecoration(
-                                      hintText: "Nome",
-                                      hintStyle: TextStyle(color: Colors.grey),
-                                      border: InputBorder.none,
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Por favor, insira seu nome';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                Container(
-                                  padding: EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      bottom: BorderSide(color: Colors.grey.shade200),
-                                    ),
-                                  ),
-                                  child: TextFormField(
-                                    controller: _sobrenomeController,
-                                    decoration: InputDecoration(
-                                      hintText: "Sobrenome",
-                                      hintStyle: TextStyle(color: Colors.grey),
-                                      border: InputBorder.none,
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Por favor, insira seu sobrenome';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                Container(
-                                  padding: EdgeInsets.all(10),
-                                  child: TextFormField(
-                                    controller: _senhaController,
-                                    obscureText: true,
-                                    decoration: InputDecoration(
-                                      hintText: "Senha",
-                                      hintStyle: TextStyle(color: Colors.grey),
-                                      border: InputBorder.none,
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Por favor, insira sua senha';
-                                      } else if (value.length < 6) {
-                                        return 'A senha deve ter pelo menos 6 caracteres';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          _buildTextField("Nome", _nomeController, _nomeFocus),
+                          _buildTextField("Sobrenome", _sobrenomeController, _sobrenomeFocus),
+                          _buildTextField("Senha", _senhaController, _senhaFocus, isPassword: true),
+                          _buildTextField("Confirmação Senha", _confirmarSenhaController, _confirmarSenhaFocus, isPassword: true),
                           SizedBox(height: 40),
-                          MaterialButton(
-                            onPressed: _submitForm,
-                            height: 50,
-                            color: Colors.green,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            child: Center(
-                              child: Text(
-                                "Cadastrar",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                          _isLoading
+                              ? CircularProgressIndicator()
+                              : MaterialButton(
+                                  onPressed: _submitForm,
+                                  height: 50,
+                                  color: Colors.orange[900],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      "Cadastrar",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
                           SizedBox(height: 20),
                           GestureDetector(
                             onTap: () {
@@ -259,6 +208,41 @@ class _CadastroScreenState extends State<CadastroScreen> {
             )
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, FocusNode focusNode, {bool isPassword = false}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: TextFormField(
+        controller: controller,
+        focusNode: focusNode,
+        obscureText: isPassword,
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.grey[200],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: (focusNode.hasFocus || controller.text.isNotEmpty) ? Colors.transparent : Colors.red,
+              width: 2,
+            ),
+          ),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Por favor, preencha este campo';
+          }
+          if (isPassword && value.length < 6) {
+            return 'A senha deve ter pelo menos 6 caracteres';
+          }
+          if (label == "Confirmação Senha" && value != _senhaController.text) {
+            return 'As senhas não coincidem';
+          }
+          return null;
+        },
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class Alerta {
+  final int codAlerta; // Adicionado CodAlerta
   final String statusAlerta;
   final String cidade;
   final String bairro;
@@ -12,6 +13,7 @@ class Alerta {
   final bool ativo;
 
   Alerta({
+    required this.codAlerta,
     required this.statusAlerta,
     required this.cidade,
     required this.bairro,
@@ -22,6 +24,7 @@ class Alerta {
 
   factory Alerta.fromJson(Map<String, dynamic> json) {
     return Alerta(
+      codAlerta: json['codAlerta'], // Adicionado CodAlerta na conversão
       statusAlerta: json['statusAlerta'],
       cidade: json['cidade'],
       bairro: json['bairro'],

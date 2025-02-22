@@ -4,6 +4,7 @@ import 'usuario.dart';
 import 'package:aps/pages/mapa-dashboard.dart';
 import 'package:aps/pages/mapa-alertas.dart';
 import 'package:aps/pages/cadastro.dart';
+import 'package:aps/pages/lista-usuarios.dart'; // Importação da nova tela de usuários
 
 class MenuAppBar extends StatefulWidget implements PreferredSizeWidget {
   final Usuario usuario;
@@ -21,11 +22,20 @@ class MenuAppBar extends StatefulWidget implements PreferredSizeWidget {
 class _MenuAppBarState extends State<MenuAppBar> {
   late String tituloAtual;
 
-  final List<Map<String, dynamic>> opcoes = [
+  // Lista de telas disponíveis no sistema
+  final List<Map<String, dynamic>> _telasDisponiveis = [
     {'titulo': 'Mapa', 'rota': MapScreen(), 'nomeTela': 'Mapa'},
     {'titulo': 'Alertas', 'rota': MapaAlertas(), 'nomeTela': 'Alertas'},
-    {'titulo': 'Cadastro', 'rota': CadastroScreen(), 'nomeTela': 'Cadastro'},
-    {'titulo': 'Perfil Usuario', 'rota': PerfilScreen(usuario: usuarioAtual,), 'nomeTela': 'Perfil Usuario'},
+    {
+      'titulo': 'Perfil Usuario',
+      'rota': PerfilScreen(usuario: usuarioAtual),
+      'nomeTela': 'Perfil Usuario'
+    },
+    {
+      'titulo': 'Lista Usuários',
+      'rota': ListaUsuariosScreen(usuarioAtual: usuarioAtual),
+      'nomeTela': 'Lista Usuario'
+    },
   ];
 
   @override
@@ -35,7 +45,9 @@ class _MenuAppBarState extends State<MenuAppBar> {
   }
 
   void _navegarParaTela(BuildContext context, String nomeTela) {
-    var telaSelecionada = opcoes.firstWhere((op) => op['nomeTela'] == nomeTela);
+    var telaSelecionada = _telasDisponiveis.firstWhere(
+      (op) => op['nomeTela'] == nomeTela,
+    );
 
     setState(() {
       tituloAtual = telaSelecionada['titulo'];
@@ -78,7 +90,7 @@ class _MenuAppBarState extends State<MenuAppBar> {
           icon: Icon(Icons.menu, color: Colors.white),
           onSelected: (String nomeTela) => _navegarParaTela(context, nomeTela),
           itemBuilder: (BuildContext context) {
-            return opcoes
+            return _telasDisponiveis
                 .where((op) => widget.usuario.permissoes.contains(op['nomeTela']))
                 .map((op) => PopupMenuItem<String>(
                       value: op['nomeTela'],

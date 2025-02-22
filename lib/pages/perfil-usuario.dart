@@ -3,6 +3,7 @@ import 'package:aps/model/app-bar-rotas.dart';
 import 'package:aps/model/usuario.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:aps/services/storage_service.dart';
 
 class PerfilScreen extends StatefulWidget {
   final Usuario usuario;
@@ -17,7 +18,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nomeController;
   late TextEditingController _loginController;
-  late TextEditingController _perfilController;
+  late String _perfilDescricao;
   bool _editando = false;
 
   @override
@@ -25,57 +26,78 @@ class _PerfilScreenState extends State<PerfilScreen> {
     super.initState();
     _nomeController = TextEditingController(text: widget.usuario.nome);
     _loginController = TextEditingController(text: widget.usuario.login);
-    _perfilController = TextEditingController(text: widget.usuario.perfil);
+    _perfilDescricao = _getPerfilDescricao(widget.usuario.codPerfil);
+  }
+
+  /// Retorna a descrição do perfil com base no `codPerfil`
+  String _getPerfilDescricao(int codPerfil) {
+    switch (codPerfil) {
+      case 1:
+        return "Administrador";
+      case 2:
+        return "Usuário";
+      default:
+        return "Desconhecido";
+    }
   }
 
   Future<void> _salvarAlteracoes() async {
     if (_formKey.currentState!.validate()) {
       String nome = _nomeController.text;
       String login = _loginController.text;
-      String perfil = _perfilController.text;
 
-      Map<String, String> dadosAtualizados = {
+      Map<String, dynamic> dadosAtualizados = {
         'nome': nome,
         'login': login,
-        'perfil': perfil,
+        'codPerfil': widget.usuario.codPerfil, // Mantendo o perfil inalterado
       };
 
-      final url = Uri.parse('http://localhost:5018/api/Usuario/Atualizar');
-      final headers = {'Content-Type': 'application/json'};
+      final String apiUrl =
+          'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/Usuario/Atualizar';
+
+      String? token = await StorageService.getToken();
+      if (token == null) {
+        _showSnackBar('Usuário não autenticado. Faça login novamente.');
+        return;
+      }
 
       try {
         final response = await http.put(
-          url,
-          headers: headers,
+          Uri.parse(apiUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
           body: jsonEncode(dadosAtualizados),
         );
 
         if (response.statusCode == 200) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Perfil atualizado com sucesso!')),
-          );
-
+          _showSnackBar('Perfil atualizado com sucesso!');
           setState(() {
             _editando = false;
           });
+        } else if (response.statusCode == 401) {
+          _showSnackBar('Sessão expirada. Faça login novamente.');
+          await StorageService.clearToken();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao atualizar perfil.')),
-          );
+          _showSnackBar('Erro ao atualizar perfil.');
         }
       } catch (e) {
-        print('Erro ao atualizar perfil: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro de conexão.')),
-        );
+        _showSnackBar('Erro de conexão.');
       }
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: MenuAppBar(usuario: widget.usuario, tituloInicial: "Meu Perfil"),
+      appBar: MenuAppBar(usuario: widget.usuario, tituloInicial: "Perfil Usuário"),
       body: Container(
         width: double.infinity,
         decoration: BoxDecoration(
@@ -98,13 +120,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    "Meu Perfil",
-                    style: TextStyle(color: Colors.white, fontSize: 40),
+                    "Olá, ${widget.usuario.nome}",
+                    style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 10),
                   Text(
-                    "Edite suas informações abaixo",
-                    style: TextStyle(color: Colors.white, fontSize: 18),
+                    "Seu perfil: $_perfilDescricao",
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -131,7 +153,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                           SizedBox(height: 20),
                           _buildEditableField("Nome", _nomeController),
                           _buildEditableField("Login", _loginController),
-                          _buildEditableField("Perfil", _perfilController),
+                          _buildReadOnlyField("Perfil", _perfilDescricao),
                           SizedBox(height: 40),
                           Center(
                             child: MaterialButton(
@@ -199,6 +221,35 @@ class _PerfilScreenState extends State<PerfilScreen> {
               }
               return null;
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyField(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[800]),
+          ),
+          SizedBox(height: 5),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 15),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade400),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+            ),
           ),
         ],
       ),
