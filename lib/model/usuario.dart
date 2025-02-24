@@ -22,7 +22,7 @@ class Usuario {
     return Usuario(
       usuario: json['login'],
       nome: json['nome'],
-      perfil: json['codPerfil'],
+      perfil: json['perfil'],
       ativo: json['ativo'].toString().toLowerCase() == 'true', // Converte string para booleano
     );
   }

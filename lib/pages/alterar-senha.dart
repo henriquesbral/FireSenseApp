@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:aps/pages/login.dart';
-import 'package:aps/services/storage_service.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -32,12 +31,14 @@ class _AlterarSenhaScreenState extends State<AlterarSenhaScreen> {
       _isLoading = true;
     });
 
-    String usuario = _usuarioController.text;
-    String senha = _senhaController.text;
+    String usuario = _usuarioController.text.trim();
+    String senha = _senhaController.text.trim();
+    String confirmarSenha = _confirmarSenhaController.text.trim();
 
     Map<String, String> requestBody = {
-      'usuario': usuario,
-      'novaSenha': senha
+      'Login': usuario,
+      'NovaSenha': senha,
+      'ConfirmaSenha': confirmarSenha
     };
 
     bool senhaAlterada = await _alterarSenha(requestBody);
@@ -65,27 +66,17 @@ class _AlterarSenhaScreenState extends State<AlterarSenhaScreen> {
     const String apiUrl =
         'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/Usuario/AlterarSenha';
 
-    String? token = await StorageService.getToken();
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Usuário não autenticado. Faça login novamente.')),
-      );
-      return false;
-    }
-
     try {
       final response = await http.put(
         Uri.parse(apiUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
         },
         body: jsonEncode(requestBody),
       );
 
       if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        return data['success'] == true;
+        return true;
       } else {
         return false;
       }

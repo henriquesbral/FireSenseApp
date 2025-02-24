@@ -21,27 +21,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
   final TextEditingController _sobrenomeController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
   final TextEditingController _confirmarSenhaController = TextEditingController();
-
-  // Criando FocusNodes para monitorar quando o campo recebe/deseleciona foco
-  final FocusNode _nomeFocus = FocusNode();
-  final FocusNode _sobrenomeFocus = FocusNode();
-  final FocusNode _senhaFocus = FocusNode();
-  final FocusNode _confirmarSenhaFocus = FocusNode();
-
   bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _setupFocusListeners();
-  }
-
-  void _setupFocusListeners() {
-    _nomeFocus.addListener(() => setState(() {}));
-    _sobrenomeFocus.addListener(() => setState(() {}));
-    _senhaFocus.addListener(() => setState(() {}));
-    _confirmarSenhaFocus.addListener(() => setState(() {}));
-  }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
@@ -50,38 +30,30 @@ class _CadastroScreenState extends State<CadastroScreen> {
       _isLoading = true;
     });
 
-    String nome = _nomeController.text;
-    String sobrenome = _sobrenomeController.text;
-    String senha = _senhaController.text;
+    String nome = _nomeController.text.trim();
+    String sobrenome = _sobrenomeController.text.trim();
+    String senha = _senhaController.text.trim();
 
     Map<String, String> cadastroData = {
-      'nome': nome,
-      'sobrenome': sobrenome,
-      'senha': senha
+      'Nome': nome,
+      'Sobrenome': sobrenome,
+      'Senha': senha
     };
 
-    bool isRegistered = await _registerUser(cadastroData);
+    Map<String, dynamic>? resultado = await _registerUser(cadastroData);
 
     setState(() {
       _isLoading = false;
     });
 
-    if (isRegistered) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cadastro realizado com sucesso!')),
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginScreen()),
-      );
+    if (resultado != null && resultado['success'] == true) {
+      _mostrarMensagemCadastro(resultado['message']);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao cadastrar. Tente novamente.')),
-      );
+      _mostrarErroCadastro(resultado?['message'] ?? "Erro ao cadastrar. Tente novamente.");
     }
   }
 
-  Future<bool> _registerUser(Map<String, String> cadastroData) async {
+  Future<Map<String, dynamic>?> _registerUser(Map<String, String> cadastroData) async {
     final url = Uri.parse(
         'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/Usuario/Adicionar');
 
@@ -92,11 +64,46 @@ class _CadastroScreenState extends State<CadastroScreen> {
         body: jsonEncode(cadastroData),
       );
 
-      return response.statusCode == 200 || response.statusCode == 201;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        var retorno = {
+          'success': true,
+          'message': response.body
+        };
+        return retorno;
+      } else {
+        return {'success': false, 'message': 'Erro ao cadastrar usuário'};
+      }
     } catch (e) {
       print('Erro ao cadastrar usuário: $e');
-      return false;
+      return {'success': false, 'message': 'Erro de conexão com o servidor'};
     }
+  }
+
+  void _mostrarMensagemCadastro(String mensagem) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 4),
+      ),
+    );
+
+    Future.delayed(Duration(seconds: 2), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
+    });
+  }
+
+  void _mostrarErroCadastro(String mensagem) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 4),
+      ),
+    );
   }
 
   @override
@@ -155,10 +162,10 @@ class _CadastroScreenState extends State<CadastroScreen> {
                       child: Column(
                         children: <Widget>[
                           SizedBox(height: 60),
-                          _buildTextField("Nome", _nomeController, _nomeFocus),
-                          _buildTextField("Sobrenome", _sobrenomeController, _sobrenomeFocus),
-                          _buildTextField("Senha", _senhaController, _senhaFocus, isPassword: true),
-                          _buildTextField("Confirmação Senha", _confirmarSenhaController, _confirmarSenhaFocus, isPassword: true),
+                          _buildTextField("Nome", _nomeController),
+                          _buildTextField("Sobrenome", _sobrenomeController),
+                          _buildTextField("Senha", _senhaController, isPassword: true),
+                          _buildTextField("Confirmação Senha", _confirmarSenhaController, isPassword: true),
                           SizedBox(height: 40),
                           _isLoading
                               ? CircularProgressIndicator()
@@ -212,12 +219,11 @@ class _CadastroScreenState extends State<CadastroScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, FocusNode focusNode, {bool isPassword = false}) {
+  Widget _buildTextField(String label, TextEditingController controller, {bool isPassword = false}) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 10),
       child: TextFormField(
         controller: controller,
-        focusNode: focusNode,
         obscureText: isPassword,
         decoration: InputDecoration(
           labelText: label,
@@ -226,7 +232,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(
-              color: (focusNode.hasFocus || controller.text.isNotEmpty) ? Colors.transparent : Colors.red,
+              color: Colors.transparent,
               width: 2,
             ),
           ),

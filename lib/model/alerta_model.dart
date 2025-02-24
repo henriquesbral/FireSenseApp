@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class Alerta {
   final int codAlerta;
@@ -11,6 +8,7 @@ class Alerta {
   final String latitude;
   final String longitude;
   final bool ativo;
+  final DateTime dataAlerta;
 
   Alerta({
     required this.codAlerta,
@@ -20,6 +18,7 @@ class Alerta {
     required this.latitude,
     required this.longitude,
     required this.ativo,
+    required this.dataAlerta,
   });
 
   factory Alerta.fromJson(Map<String, dynamic> json) {
@@ -31,7 +30,7 @@ class Alerta {
       latitude: json['latitude'],
       longitude: json['longitude'],
       ativo: json['ativo'] == 1, // Converte 1 para true e 0 para false
+      dataAlerta: DateTime.parse(json['dataAlerta']), // Converte string para DateTime
     );
   }
 }
-

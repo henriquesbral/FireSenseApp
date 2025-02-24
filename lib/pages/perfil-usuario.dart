@@ -4,6 +4,7 @@ import 'package:aps/model/usuario.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:aps/services/storage_service.dart';
+import 'package:aps/pages/lista-usuarios.dart';
 
 class PerfilScreen extends StatefulWidget {
   final Usuario usuario;
@@ -18,19 +19,21 @@ class _PerfilScreenState extends State<PerfilScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nomeController;
   late TextEditingController _loginController;
-  late String _perfilDescricao;
+  late String _perfilSelecionado;
   bool _editando = false;
+  late String _loginAntigo;
 
   @override
   void initState() {
     super.initState();
     _nomeController = TextEditingController(text: widget.usuario.nome);
     _loginController = TextEditingController(text: widget.usuario.usuario);
-    _perfilDescricao = _getPerfilDescricao(widget.usuario.perfil);
+    _perfilSelecionado = _getPerfilNome(widget.usuario.perfil);
+    _loginAntigo = widget.usuario.usuario; // Armazena o login antigo
   }
 
-  /// Retorna a descrição do perfil com base no `codPerfil`
-  String _getPerfilDescricao(int codPerfil) {
+  /// Retorna o nome do perfil com base no código
+  String _getPerfilNome(int codPerfil) {
     switch (codPerfil) {
       case 1:
         return "Administrador";
@@ -41,50 +44,70 @@ class _PerfilScreenState extends State<PerfilScreen> {
     }
   }
 
+  /// Retorna o código do perfil com base no nome selecionado
+  int _getPerfilCodigo(String nomePerfil) {
+    switch (nomePerfil) {
+      case "Administrador":
+        return 1;
+      case "Usuário":
+        return 2;
+      default:
+        return 0; // Código inválido
+    }
+  }
+
   Future<void> _salvarAlteracoes() async {
-    if (_formKey.currentState!.validate()) {
-      String nome = _nomeController.text;
-      String login = _loginController.text;
+    if (!_formKey.currentState!.validate()) return;
 
-      Map<String, dynamic> dadosAtualizados = {
-        'nome': nome,
-        'login': login,
-        'codPerfil': widget.usuario.perfil, // Mantendo o perfil inalterado
-      };
+    String nome = _nomeController.text.trim();
+    String login = _loginController.text.trim();
+    int perfilCodigo = _getPerfilCodigo(_perfilSelecionado); // Converte para código
 
-      final String apiUrl =
-          'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/Usuario/Atualizar';
+    Map<String, dynamic> dadosAtualizados = {
+      'nome': nome,
+      'login': login,
+      'loginAntigo': _loginAntigo,
+      'perfil': perfilCodigo, // Agora envia o código do perfil
+    };
 
+    const String apiUrl =
+        'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/Usuario/AtualizarUsuario';
+
+    try {
       String? token = await StorageService.getToken();
       if (token == null) {
         _showSnackBar('Usuário não autenticado. Faça login novamente.');
         return;
       }
 
-      try {
-        final response = await http.put(
-          Uri.parse(apiUrl),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode(dadosAtualizados),
-        );
+      final response = await http.put(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(dadosAtualizados),
+      );
 
-        if (response.statusCode == 200) {
-          _showSnackBar('Perfil atualizado com sucesso!');
-          setState(() {
-            _editando = false;
-          });
-        } else if (response.statusCode == 401) {
-          _showSnackBar('Sessão expirada. Faça login novamente.');
-          await StorageService.clearToken();
-        } else {
-          _showSnackBar('Erro ao atualizar perfil.');
-        }
-      } catch (e) {
-        _showSnackBar('Erro de conexão.');
+      if (response.statusCode == 200) {
+        _showSnackBar('Perfil atualizado com sucesso!');
+        
+        // Aguarda a mensagem antes de navegar
+        Future.delayed(Duration(seconds: 1), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => ListaUsuariosScreen(usuarioAtual: widget.usuario)),
+          );
+        });
+
+      } else if (response.statusCode == 401) {
+        _showSnackBar('Sessão expirada. Faça login novamente.');
+        await StorageService.clearToken();
+      } else {
+        _showSnackBar('Erro ao atualizar perfil.');
       }
+    } catch (e) {
+      _showSnackBar('Erro de conexão.');
     }
   }
 
@@ -125,7 +148,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    "Seu perfil: $_perfilDescricao",
+                    "Seu perfil: $_perfilSelecionado",
                     style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -153,7 +176,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                           SizedBox(height: 20),
                           _buildEditableField("Nome", _nomeController),
                           _buildEditableField("Login", _loginController),
-                          _buildReadOnlyField("Perfil", _perfilDescricao),
+                          _buildPerfilDropdown(),
                           SizedBox(height: 40),
                           Center(
                             child: MaterialButton(
@@ -227,29 +250,28 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
   }
 
-  Widget _buildReadOnlyField(String label, String value) {
+  Widget _buildPerfilDropdown() {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
+            "Perfil",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[800]),
           ),
           SizedBox(height: 5),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 15),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade400),
+          DropdownButtonFormField<String>(
+            value: _perfilSelecionado,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey[200],
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 16, color: Colors.black87),
-            ),
+            items: ["Administrador", "Usuário"]
+                .map((perfil) => DropdownMenuItem(value: perfil, child: Text(perfil)))
+                .toList(),
+            onChanged: _editando ? (value) => setState(() => _perfilSelecionado = value!) : null,
           ),
         ],
       ),

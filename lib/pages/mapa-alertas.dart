@@ -23,7 +23,7 @@ class MapaAlertas extends StatefulWidget {
 class _MapaAlertasState extends State<MapaAlertas> {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
-  final LatLng _initialPosition = LatLng(-23.5505, -46.6333); // São Paulo, Brasil
+  LatLng _initialPosition = LatLng(-23.5505, -46.6333); // Posição padrão de São Paulo
 
   final Map<String, Color> _alertColors = {
     'Preventivo': Colors.green,
@@ -31,6 +31,8 @@ class _MapaAlertasState extends State<MapaAlertas> {
     'Emergência': Colors.orange,
     'Crítico': Colors.red,
   };
+
+  List<Alerta> _alertas = [];
 
   @override
   void initState() {
@@ -60,13 +62,18 @@ class _MapaAlertasState extends State<MapaAlertas> {
 
       if (response.statusCode == 200) {
         List<dynamic> jsonList = json.decode(response.body);
-        List<Alerta> alertas = jsonList.map((json) => Alerta.fromJson(json)).toList();
+        _alertas = jsonList.map((json) => Alerta.fromJson(json)).toList();
 
-        _mapController?.animateCamera(
-          CameraUpdate.newLatLngZoom(_initialPosition, 5),
-        );
+        if (_alertas.isNotEmpty) {
+          double lat = double.tryParse(_alertas.first.latitude) ?? -23.5505;
+          double lng = double.tryParse(_alertas.first.longitude) ?? -46.6333;
+          setState(() {
+            _initialPosition = LatLng(lat, lng);
+          });
+        }
 
-        _addMarkers(alertas);
+        _addMarkers(_alertas);
+        _mapController?.animateCamera(CameraUpdate.newLatLng(_initialPosition));
       } else {
         _showSnackBar('Erro ao carregar alertas.');
       }
@@ -75,28 +82,91 @@ class _MapaAlertasState extends State<MapaAlertas> {
     }
   }
 
+  // Retorna o valor de hue do marcador conforme o status do alerta.
+  double _getMarkerHue(List<Alerta> alerts) {
+    // Se existir pelo menos um alerta com status "Crítico", retorna hueRed.
+    if (alerts.any((a) => a.statusAlerta == "Crítico")) {
+      return BitmapDescriptor.hueRed;
+    }
+    // Caso contrário, utiliza o status do primeiro alerta
+    switch (alerts.first.statusAlerta) {
+      case "Preventivo":
+        return BitmapDescriptor.hueGreen;
+      case "Atenção":
+        return BitmapDescriptor.hueYellow;
+      case "Emergência":
+        return BitmapDescriptor.hueOrange;
+      default:
+        return BitmapDescriptor.hueBlue; // valor padrão se o status não corresponder
+    }
+  }
+
   void _addMarkers(List<Alerta> alertas) {
     Set<Marker> markers = {};
 
+    // Agrupa alertas pela mesma latitude e longitude
+    Map<String, List<Alerta>> groupedAlerts = {};
+
     for (var alerta in alertas) {
-      double lat = double.tryParse(alerta.latitude) ?? 0.0;
-      double lng = double.tryParse(alerta.longitude) ?? 0.0;
+      String key = "${alerta.latitude},${alerta.longitude}";
+      if (!groupedAlerts.containsKey(key)) {
+        groupedAlerts[key] = [];
+      }
+      groupedAlerts[key]!.add(alerta);
+    }
+
+    groupedAlerts.forEach((key, alerts) {
+      double lat = double.tryParse(alerts.first.latitude) ?? 0.0;
+      double lng = double.tryParse(alerts.first.longitude) ?? 0.0;
+      double markerHue = _getMarkerHue(alerts);
 
       markers.add(
         Marker(
-          markerId: MarkerId(alerta.codAlerta.toString()),
+          markerId: MarkerId(key),
           position: LatLng(lat, lng),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              alerta.ativo ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed),
-          onTap: () => _mostrarDetalhes(alerta, lat, lng),
+          icon: BitmapDescriptor.defaultMarkerWithHue(markerHue),
+          onTap: () => _mostrarListaAlertas(alerts, lat, lng),
         ),
       );
-    }
+    });
 
     setState(() {
       _markers.clear();
       _markers.addAll(markers);
     });
+  }
+
+  void _mostrarListaAlertas(List<Alerta> alerts, double lat, double lng) {
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(lat, lng), 15),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Alertas na Mesma Localização"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: alerts.map((alerta) {
+            return ListTile(
+              leading: Icon(Icons.warning, color: _alertColors[alerta.statusAlerta] ?? Colors.blueGrey),
+              title: Text(alerta.statusAlerta),
+              subtitle: Text("Código: ${alerta.codAlerta}"),
+              onTap: () {
+                Navigator.pop(context);
+                _mostrarDetalhes(alerta, lat, lng);
+              },
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Fechar"),
+          ),
+        ],
+      ),
+    );
   }
 
   void _mostrarDetalhes(Alerta alerta, double lat, double lng) {
@@ -110,21 +180,37 @@ class _MapaAlertasState extends State<MapaAlertas> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: alertColor,
-        title: Text("Detalhes do Alerta", style: TextStyle(color: Colors.white)),
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.white),
+            SizedBox(width: 10),
+            Text("Detalhes do Alerta", style: TextStyle(color: Colors.white)),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("🆔 Código: ${alerta.codAlerta}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            Text("🔴 Status: ${alerta.statusAlerta}", style: TextStyle(color: Colors.white)),
-            Text("🏙 Cidade: ${alerta.cidade}", style: TextStyle(color: Colors.white)),
-            Text("📍 Bairro: ${alerta.bairro}", style: TextStyle(color: Colors.white)),
-            Text("🌍 Latitude: ${alerta.latitude}", style: TextStyle(color: Colors.white)),
-            Text("🌍 Longitude: ${alerta.longitude}", style: TextStyle(color: Colors.white)),
-            Text("🟢 Ativo: ${alerta.ativo ? 'Sim' : 'Não'}", style: TextStyle(color: Colors.white)),
+            Text("Código: ${alerta.codAlerta}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            Text("Status: ${alerta.statusAlerta}", style: TextStyle(color: Colors.white)),
+            Text("Cidade: ${alerta.cidade}", style: TextStyle(color: Colors.white)),
+            Text("Bairro: ${alerta.bairro}", style: TextStyle(color: Colors.white)),
+            Text("Latitude: ${alerta.latitude}", style: TextStyle(color: Colors.white)),
+            Text("Longitude: ${alerta.longitude}", style: TextStyle(color: Colors.white)),
+            Text("Data: ${alerta.dataAlerta.toLocal()}", style: TextStyle(color: Colors.white)),
           ],
         ),
         actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _mostrarListaAlertas(
+                  _alertas.where((a) => a.latitude == alerta.latitude && a.longitude == alerta.longitude).toList(),
+                  lat,
+                  lng);
+            },
+            child: Text("Voltar para Lista", style: TextStyle(color: Colors.white)),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text("Fechar", style: TextStyle(color: Colors.white)),
@@ -154,7 +240,7 @@ class _MapaAlertasState extends State<MapaAlertas> {
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
               target: _initialPosition,
-              zoom: 5,
+              zoom: 10,
             ),
             mapType: MapType.hybrid,
             markers: _markers,

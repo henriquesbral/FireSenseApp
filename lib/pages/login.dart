@@ -21,6 +21,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usuarioController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
+  final _formKey = GlobalKey<FormState>(); // Chave para validação do formulário
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -49,59 +50,53 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-  if (_usuarioController.text.isEmpty || _senhaController.text.isEmpty) {
-    setState(() {
-      _errorMessage = "Usuário e senha são obrigatórios!";
-    });
-    return;
-  }
-
-  setState(() {
-    _isLoading = true;
-  });
-
-  const String apiUrl =
-      'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/auth';
-
-  Map<String, String> requestBody = {
-    'Usuario': _usuarioController.text,
-    'Senha': _senhaController.text,
-  };
-
-  try {
-    final response = await http.post(
-      Uri.parse(apiUrl),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(requestBody),
-    );
-
-    if (response.statusCode == 200) {
-      var data = jsonDecode(response.body);
-      
-      // Salva o token
-      await StorageService.saveToken(data['token']);
-
-      // Atualiza o usuarioAtual com os dados recebidos
-      setState(() {
-        usuarioAtual = Usuario.fromJson(data);
-      });
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => MapScreen()),
-      );
-    } else {
-      _showSnackBar('Falha na autenticação. Verifique suas credenciais.');
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
-  } catch (e) {
-    _showSnackBar('Erro ao conectar ao servidor.');
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
-  }
-}
 
+    setState(() {
+      _isLoading = true;
+    });
+
+    const String apiUrl =
+        'https://firesenseapi-gdg2fze3ath6gpa2.brazilsouth-01.azurewebsites.net/api/auth';
+
+    Map<String, String> requestBody = {
+      'Usuario': _usuarioController.text.trim(),
+      'Senha': _senhaController.text.trim(),
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+
+        await StorageService.saveToken(data['token']);
+
+        setState(() {
+          usuarioAtual = Usuario.fromJson(data);
+        });
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MapScreen()),
+        );
+      } else {
+        _showSnackBar('Falha na autenticação. Verifique suas credenciais.');
+      }
+    } catch (e) {
+      _showSnackBar('Erro ao conectar ao servidor.');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -175,126 +170,141 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(30),
-                  child: Column(
-                    children: <Widget>[
-                      SizedBox(height: 60),
-                      FadeInUp(
-                        duration: Duration(milliseconds: 1400),
-                        child: Container(
-                          decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Color.fromRGBO(225, 95, 27, .3),
-                                    blurRadius: 20,
-                                    offset: Offset(0, 10))
-                              ]),
-                          child: Column(
-                            children: <Widget>[
-                              Container(
-                                padding: EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                    border: Border(
-                                        bottom: BorderSide(
-                                            color: Colors.grey.shade200))),
-                                child: TextField(
-                                  controller: _usuarioController,
-                                  decoration: InputDecoration(
-                                      hintText: "Usuário",
-                                      hintStyle: TextStyle(color: Colors.grey),
-                                      border: InputBorder.none),
-                                ),
-                              ),
-                              Container(
-                                padding: EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                    border: Border(
-                                        bottom: BorderSide(
-                                            color: Colors.grey.shade200))),
-                                child: TextField(
-                                  controller: _senhaController,
-                                  obscureText: true,
-                                  decoration: InputDecoration(
-                                      hintText: "Senha",
-                                      hintStyle: TextStyle(color: Colors.grey),
-                                      border: InputBorder.none),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                      if (_errorMessage != null)
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: <Widget>[
+                        SizedBox(height: 60),
                         FadeInUp(
-                          duration: Duration(milliseconds: 1500),
-                          child: Text(
-                            _errorMessage!,
-                            style: TextStyle(
-                                color: Colors.red,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      SizedBox(height: 20),
-                      FadeInUp(
-                        duration: Duration(milliseconds: 1500),
-                        child: GestureDetector(
-                          onTap: _navigateToAlterarSenha,
-                          child: Text(
-                            "Esqueceu a senha?",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 40),
-                      FadeInUp(
-                        duration: Duration(milliseconds: 1600),
-                        child: _isLoading
-                            ? CircularProgressIndicator()
-                            : MaterialButton(
-                                onPressed: _login,
-                                height: 50,
-                                color: Colors.orange[900],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    "Entrar",
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold),
+                          duration: Duration(milliseconds: 1400),
+                          child: Container(
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Color.fromRGBO(225, 95, 27, .3),
+                                      blurRadius: 20,
+                                      offset: Offset(0, 10))
+                                ]),
+                            child: Column(
+                              children: <Widget>[
+                                Container(
+                                  padding: EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                      border: Border(
+                                          bottom: BorderSide(
+                                              color: Colors.grey.shade200))),
+                                  child: TextFormField(
+                                    controller: _usuarioController,
+                                    decoration: InputDecoration(
+                                        hintText: "Usuário",
+                                        hintStyle: TextStyle(color: Colors.grey),
+                                        border: InputBorder.none),
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return "Usuário é obrigatório!";
+                                      }
+                                      return null;
+                                    },
                                   ),
                                 ),
-                              ),
-                      ),
-                      SizedBox(height: 20),
-                      FadeInUp(
-                        duration: Duration(milliseconds: 1700),
-                        child: MaterialButton(
-                          onPressed: _navigateToCadastro,
-                          height: 50,
-                          color: Colors.grey[800],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: Center(
-                            child: Text(
-                              "Cadastrar",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
+                                Container(
+                                  padding: EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                      border: Border(
+                                          bottom: BorderSide(
+                                              color: Colors.grey.shade200))),
+                                  child: TextFormField(
+                                    controller: _senhaController,
+                                    obscureText: true,
+                                    decoration: InputDecoration(
+                                        hintText: "Senha",
+                                        hintStyle: TextStyle(color: Colors.grey),
+                                        border: InputBorder.none),
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return "Senha é obrigatória!";
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 20),
+                        if (_errorMessage != null)
+                          FadeInUp(
+                            duration: Duration(milliseconds: 1500),
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        SizedBox(height: 20),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 1500),
+                          child: GestureDetector(
+                            onTap: _navigateToAlterarSenha,
+                            child: Text(
+                              "Esqueceu a senha?",
+                              style: TextStyle(
+                                color: Colors.grey,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 40),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 1600),
+                          child: _isLoading
+                              ? CircularProgressIndicator()
+                              : MaterialButton(
+                                  onPressed: _login,
+                                  height: 50,
+                                  color: Colors.orange[900],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      "Entrar",
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        SizedBox(height: 20),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 1700),
+                          child: MaterialButton(
+                            onPressed: _navigateToCadastro,
+                            height: 50,
+                            color: Colors.grey[800],
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Cadastrar",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
