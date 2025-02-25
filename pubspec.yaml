@@ -1,4 +1,4 @@
-name: aps
+name: Fire_Sense
 description: "Projeto da APS"
 publish_to: 'none'
 version: 0.1.0
@@ -15,13 +15,22 @@ dependencies:
   animate_do: ^3.1.2
   cupertino_icons: ^1.0.2
   shared_preferences: ^2.5.2
+  flutter_launcher_icons: ^0.13.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/fundo_login.png
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icones/FireSenseIcon.png" 
+  adaptive_icon_background: "#ffffff"  # Cor de fundo do ícone adaptável
+  adaptive_icon_foreground: "assets/icones/FireSenseIcon.png"

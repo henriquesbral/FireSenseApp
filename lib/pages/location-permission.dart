@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:aps/pages/mapa-dashboard.dart';
+import 'package:Fire_Sense/pages/mapa-dashboard.dart';
 
 void main() {
   runApp(MaterialApp(

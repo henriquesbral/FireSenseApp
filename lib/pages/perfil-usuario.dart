@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:aps/model/app-bar-rotas.dart';
-import 'package:aps/model/usuario.dart';
+import 'package:Fire_Sense/model/app-bar-rotas.dart';
+import 'package:Fire_Sense/model/usuario.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:aps/services/storage_service.dart';
-import 'package:aps/pages/lista-usuarios.dart';
+import 'package:Fire_Sense/services/storage_service.dart';
+import 'package:Fire_Sense/pages/lista-usuarios.dart';
 
 class PerfilScreen extends StatefulWidget {
   final Usuario usuario;

@@ -1,13 +1,13 @@
 // ignore_for_file: deprecated_member_use
 
-import 'package:aps/model/app-bar-rotas.dart';
-import 'package:aps/model/usuario.dart';
+import 'package:Fire_Sense/model/app-bar-rotas.dart';
+import 'package:Fire_Sense/model/usuario.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:aps/services/storage_service.dart';
+import 'package:Fire_Sense/services/storage_service.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -28,7 +28,12 @@ class _MapScreenState extends State<MapScreen> {
   Map<String, dynamic>? _locationData;
   bool _locationCaptured = false;
 
-  final List<String> _alertTypes = ['Preventivo', 'Atenção', 'Emergência', 'Crítico'];
+  final List<String> _alertTypes = [
+    'Preventivo',
+    'Atenção',
+    'Emergência',
+    'Crítico'
+  ];
   String _selectedAlertType = 'Preventivo';
 
   final Map<String, Color> _alertColors = {
@@ -37,6 +42,60 @@ class _MapScreenState extends State<MapScreen> {
     'Emergência': Colors.orange,
     'Crítico': Colors.red,
   };
+
+  Future<Map<String, dynamic>> _getAddressFromLatLng(
+      double lat, double lng) async {
+    const String apiKey =
+        "AIzaSyCI0r9g6RW9L2N1BnacdDDOLPGKd380JR8"; 
+    final String url =
+        "https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey";
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['results'].isNotEmpty) {
+          final addressComponents = data['results'][0]['address_components'];
+
+          String cidade = "";
+          String estado = "";
+          String bairro = "";
+          String endereco = "";
+
+          for (var component in addressComponents) {
+            if (component['types'].contains('locality')) {
+              cidade = component['long_name'];
+            } else if (component['types']
+                .contains('administrative_area_level_1')) {
+              estado = component['short_name'];
+            } else if (component['types'].contains('sublocality') ||
+                component['types'].contains('neighborhood')) {
+              bairro = component['long_name'];
+            } else if (component['types'].contains('route')) {
+              endereco = component['long_name'];
+            }
+          }
+
+          return {
+            'Cidade': cidade,
+            'Estado': estado,
+            'Bairro': bairro,
+            'Endereco': endereco,
+          };
+        }
+      }
+    } catch (e) {
+      print("Erro ao obter endereço: $e");
+    }
+
+    return {
+      'Cidade': 'Desconhecido',
+      'Estado': 'Desconhecido',
+      'Bairro': 'Desconhecido',
+      'Endereco': 'Desconhecido',
+    };
+  }
 
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -63,6 +122,9 @@ class _MapScreenState extends State<MapScreen> {
       desiredAccuracy: LocationAccuracy.high,
     );
 
+    Map<String, dynamic> address =
+        await _getAddressFromLatLng(position.latitude, position.longitude);
+
     setState(() {
       _currentLocation = LatLng(position.latitude, position.longitude);
       _markers.clear();
@@ -82,10 +144,10 @@ class _MapScreenState extends State<MapScreen> {
         'StatusAlerta': _selectedAlertType,
         'Latitude': position.latitude.toString(),
         'Longitude': position.longitude.toString(),
-        'Cidade': 'São Paulo',
-        'Estado': 'SP',
-        'Endereco': 'Rua Exemplo, 123',
-        'Bairro': 'Centro',
+        'Cidade': address['Cidade'],
+        'Estado': address['Estado'],
+        'Endereco': address['Endereco'],
+        'Bairro': address['Bairro'],
         'NomeLocalizacao': 'Local Atual',
         'Usuario': usuarioAtual.usuario,
       };
@@ -132,14 +194,16 @@ class _MapScreenState extends State<MapScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text("Cancelar", style: TextStyle(color: Colors.white)),
+                  child:
+                      Text("Cancelar", style: TextStyle(color: Colors.white)),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
                     _showConfirmDialog();
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.white),
                   child: Text(
                     "Confirmar",
                     style: TextStyle(color: _alertColors[_selectedAlertType]),
@@ -158,18 +222,26 @@ class _MapScreenState extends State<MapScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: _alertColors[_selectedAlertType],
-        title: Text("Confirmar Localização", style: TextStyle(color: Colors.white)),
+        title: Text("Confirmar Localização",
+            style: TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Cidade: ${_locationData!['Cidade']}", style: TextStyle(color: Colors.white)),
-            Text("Estado: ${_locationData!['Estado']}", style: TextStyle(color: Colors.white)),
-            Text("Endereço: ${_locationData!['Endereco']}", style: TextStyle(color: Colors.white)),
-            Text("Bairro: ${_locationData!['Bairro']}", style: TextStyle(color: Colors.white)),
-            Text("Latitude: ${_locationData!['Latitude']}", style: TextStyle(color: Colors.white)),
-            Text("Longitude: ${_locationData!['Longitude']}", style: TextStyle(color: Colors.white)),
-            Text("Status do Alerta: ${_locationData!['StatusAlerta']}", style: TextStyle(color: Colors.white)),
+            Text("Cidade: ${_locationData!['Cidade']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Estado: ${_locationData!['Estado']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Endereço: ${_locationData!['Endereco']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Bairro: ${_locationData!['Bairro']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Latitude: ${_locationData!['Latitude']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Longitude: ${_locationData!['Longitude']}",
+                style: TextStyle(color: Colors.white)),
+            Text("Status do Alerta: ${_locationData!['StatusAlerta']}",
+                style: TextStyle(color: Colors.white)),
           ],
         ),
         actions: [
@@ -183,7 +255,8 @@ class _MapScreenState extends State<MapScreen> {
               _sendLocationToAPI();
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-            child: Text("Confirmar e Enviar", style: TextStyle(color: _alertColors[_selectedAlertType])),
+            child: Text("Confirmar e Enviar",
+                style: TextStyle(color: _alertColors[_selectedAlertType])),
           ),
         ],
       ),

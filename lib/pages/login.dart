@@ -1,12 +1,12 @@
 import 'package:animate_do/animate_do.dart';
-import 'package:aps/pages/alterar-senha.dart';
-import 'package:aps/pages/cadastro.dart';
-import 'package:aps/model/usuario.dart';
-import 'package:aps/pages/mapa-dashboard.dart';
+import 'package:Fire_Sense/pages/alterar-senha.dart';
+import 'package:Fire_Sense/pages/cadastro.dart';
+import 'package:Fire_Sense/model/usuario.dart';
+import 'package:Fire_Sense/pages/mapa-dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:aps/services/storage_service.dart';
+import 'package:Fire_Sense/services/storage_service.dart';
 
 void main() => runApp(MaterialApp(
       debugShowCheckedModeBanner: false,

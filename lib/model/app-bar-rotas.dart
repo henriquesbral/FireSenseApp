@@ -1,12 +1,12 @@
-import 'package:aps/pages/perfil-usuario.dart';
+import 'package:Fire_Sense/pages/perfil-usuario.dart';
 import 'package:flutter/material.dart';
 import 'usuario.dart';
-import 'package:aps/pages/mapa-dashboard.dart';
-import 'package:aps/pages/mapa-alertas.dart';
-import 'package:aps/pages/cadastro.dart';
-import 'package:aps/pages/lista-usuarios.dart';
-import 'package:aps/pages/login.dart'; // Importação da tela de login
-import 'package:aps/services/storage_service.dart'; // Para limpar o token
+import 'package:Fire_Sense/pages/mapa-dashboard.dart';
+import 'package:Fire_Sense/pages/mapa-alertas.dart';
+import 'package:Fire_Sense/pages/cadastro.dart';
+import 'package:Fire_Sense/pages/lista-usuarios.dart';
+import 'package:Fire_Sense/pages/login.dart'; // Importação da tela de login
+import 'package:Fire_Sense/services/storage_service.dart'; // Para limpar o token
 
 class MenuAppBar extends StatefulWidget implements PreferredSizeWidget {
   final Usuario usuario;

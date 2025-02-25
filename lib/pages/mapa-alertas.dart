@@ -1,12 +1,12 @@
 // ignore_for_file: deprecated_member_use
-import 'package:aps/model/app-bar-rotas.dart';
-import 'package:aps/model/usuario.dart';
+import 'package:Fire_Sense/model/app-bar-rotas.dart';
+import 'package:Fire_Sense/model/usuario.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:aps/services/storage_service.dart';
-import 'package:aps/model/alerta_model.dart'; // Importação da classe Alerta
+import 'package:Fire_Sense/services/storage_service.dart';
+import 'package:Fire_Sense/model/alerta_model.dart'; // Importação da classe Alerta
 
 void main() {
   runApp(MaterialApp(
