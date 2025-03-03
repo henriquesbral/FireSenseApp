@@ -5,6 +5,7 @@ import 'package:Fire_Sense/pages/mapa-dashboard.dart';
 import 'package:Fire_Sense/pages/mapa-alertas.dart';
 import 'package:Fire_Sense/pages/cadastro.dart';
 import 'package:Fire_Sense/pages/lista-usuarios.dart';
+import 'package:Fire_Sense/pages/lista-alertas.dart';
 import 'package:Fire_Sense/pages/login.dart'; // Importação da tela de login
 import 'package:Fire_Sense/services/storage_service.dart'; // Para limpar o token
 
@@ -37,6 +38,11 @@ class _MenuAppBarState extends State<MenuAppBar> {
       'rota': ListaUsuariosScreen(usuarioAtual: usuarioAtual),
       'nomeTela': 'Lista Usuario'
     },
+    {
+      'titulo': 'Lista Alertas',
+      'rota': ListaAlertasScreen(usuarioAtual: usuarioAtual),
+      'nomeTela': 'Lista Alertas' // Correção aqui!
+    },
   ];
 
   @override
@@ -48,16 +54,19 @@ class _MenuAppBarState extends State<MenuAppBar> {
   void _navegarParaTela(BuildContext context, String nomeTela) {
     var telaSelecionada = _telasDisponiveis.firstWhere(
       (op) => op['nomeTela'] == nomeTela,
+      orElse: () => {},
     );
 
-    setState(() {
-      tituloAtual = telaSelecionada['titulo'];
-    });
+    if (telaSelecionada.isNotEmpty) {
+      setState(() {
+        tituloAtual = telaSelecionada['titulo'];
+      });
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => telaSelecionada['rota']),
-    );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => telaSelecionada['rota']),
+      );
+    }
   }
 
   Future<void> _realizarLogoff(BuildContext context) async {

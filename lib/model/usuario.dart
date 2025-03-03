@@ -14,7 +14,7 @@ class Usuario {
 
   static List<String> getPermissoes(int perfil) {
     return perfil == 1
-        ? ["Mapa", "Perfil Usuario", "Alertas", "Lista Usuario"] // Administrador
+        ? ["Mapa", "Perfil Usuario", "Alertas", "Lista Usuario", "Lista Alertas"] // Administrador
         : ["Mapa", "Alertas"]; // Usuário
   }
 

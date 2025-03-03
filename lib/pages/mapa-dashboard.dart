@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:Fire_Sense/model/app-bar-rotas.dart';
 import 'package:Fire_Sense/model/usuario.dart';
 import 'package:flutter/material.dart';
@@ -45,8 +43,7 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<Map<String, dynamic>> _getAddressFromLatLng(
       double lat, double lng) async {
-    const String apiKey =
-        "AIzaSyCI0r9g6RW9L2N1BnacdDDOLPGKd380JR8"; 
+    const String apiKey = "AIzaSyCI0r9g6RW9L2N1BnacdDDOLPGKd380JR8";
     final String url =
         "https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey";
 
@@ -67,6 +64,10 @@ class _MapScreenState extends State<MapScreen> {
             if (component['types'].contains('locality')) {
               cidade = component['long_name'];
             } else if (component['types']
+                    .contains('administrative_area_level_2') &&
+                cidade.isEmpty) {
+              cidade = component['long_name']; // Alternativa para cidade
+            } else if (component['types']
                 .contains('administrative_area_level_1')) {
               estado = component['short_name'];
             } else if (component['types'].contains('sublocality') ||
@@ -78,10 +79,10 @@ class _MapScreenState extends State<MapScreen> {
           }
 
           return {
-            'Cidade': cidade,
-            'Estado': estado,
-            'Bairro': bairro,
-            'Endereco': endereco,
+            'Cidade': cidade.isNotEmpty ? cidade : 'Desconhecido',
+            'Estado': estado.isNotEmpty ? estado : 'Desconhecido',
+            'Bairro': bairro.isNotEmpty ? bairro : 'Desconhecido',
+            'Endereco': endereco.isNotEmpty ? endereco : 'Desconhecido',
           };
         }
       }
@@ -320,16 +321,16 @@ class _MapScreenState extends State<MapScreen> {
             markers: _markers,
           ),
           Positioned(
-            bottom: 20,
+            bottom: 30,
             left: 10,
-            right: 10,
+            right: 60,
             child: Row(
               children: [
                 Expanded(
                   child: FloatingActionButton.extended(
                     onPressed: _getCurrentLocation,
-                    icon: Icon(Icons.my_location),
-                    label: Text("Capturar Localização"),
+                    icon: Icon(Icons.add_location_alt),
+                    label: Text("Capturar"),
                     backgroundColor: Colors.blueGrey,
                   ),
                 ),
@@ -338,7 +339,7 @@ class _MapScreenState extends State<MapScreen> {
                   child: FloatingActionButton.extended(
                     onPressed: _showAlertTypeSelection,
                     icon: Icon(Icons.send),
-                    label: Text("Enviar Localização"),
+                    label: Text("Enviar"),
                     backgroundColor: Colors.green,
                   ),
                 ),

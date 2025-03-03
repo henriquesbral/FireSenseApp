@@ -23,7 +23,7 @@ class MapaAlertas extends StatefulWidget {
 class _MapaAlertasState extends State<MapaAlertas> {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
-  LatLng _initialPosition = LatLng(-23.5505, -46.6333); // Posição padrão de São Paulo
+  LatLng _initialPosition = LatLng(-23.65424252145233, -46.70823745889411); // Posição padrão de São Paulo
 
   final Map<String, Color> _alertColors = {
     'Preventivo': Colors.green,
@@ -246,11 +246,11 @@ class _MapaAlertasState extends State<MapaAlertas> {
             markers: _markers,
           ),
           Positioned(
-            bottom: 80,
+            bottom: 30,
             left: 20,
             child: FloatingActionButton.extended(
               onPressed: _fetchAlertas,
-              icon: Icon(Icons.refresh),
+              icon: Icon(Icons.list_alt_outlined),
               label: Text("Atualizar Alertas"),
             ),
           ),
