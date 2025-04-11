@@ -158,7 +158,7 @@ class _ListaAlertasScreenState extends State<ListaAlertasScreen> {
     return await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text("Confirmação"),
+            title: Text("Desativar Alerta"),
             content: Text(mensagem),
             actions: [
               TextButton(

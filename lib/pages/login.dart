@@ -118,58 +118,68 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            colors: [
-              Colors.orange.shade900,
-              Colors.orange.shade800,
-              Colors.orange.shade400
-            ],
-          ),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    resizeToAvoidBottomInset: true,
+    body: Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          colors: [
+            Colors.orange.shade900,
+            Colors.orange.shade800,
+            Colors.orange.shade400
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            SizedBox(height: 80),
-            Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  FadeInUp(
-                      duration: Duration(milliseconds: 1000),
-                      child: Text(
-                        "Fire Sense",
-                        style: TextStyle(color: Colors.white, fontSize: 40),
-                      )),
-                  SizedBox(height: 10),
-                  FadeInUp(
-                      duration: Duration(milliseconds: 1300),
-                      child: Text(
-                        "Bem-vindo de volta",
-                        style: TextStyle(color: Colors.white, fontSize: 18),
-                      )),
-                ],
-              ),
-            ),
-            SizedBox(height: 20),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(60),
-                    topRight: Radius.circular(60),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SizedBox(height: 80),
+          Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                FadeInUp(
+                  duration: Duration(milliseconds: 1000),
+                  child: Text(
+                    "Fire Sense",
+                    style: TextStyle(color: Colors.white, fontSize: 40),
                   ),
                 ),
+                SizedBox(height: 10),
+                FadeInUp(
+                  duration: Duration(milliseconds: 1300),
+                  child: Text(
+                    "Bem-vindo de volta",
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(60),
+                  topRight: Radius.circular(60),
+                ),
+              ),
+              child: SingleChildScrollView(
+                physics: BouncingScrollPhysics(),
                 child: Padding(
-                  padding: EdgeInsets.all(30),
+                  padding: EdgeInsets.only(
+                    left: 30,
+                    right: 30,
+                    top: 30,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 30,
+                  ),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -179,28 +189,34 @@ class _LoginScreenState extends State<LoginScreen> {
                           duration: Duration(milliseconds: 1400),
                           child: Container(
                             decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: Color.fromRGBO(225, 95, 27, .3),
-                                      blurRadius: 20,
-                                      offset: Offset(0, 10))
-                                ]),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color.fromRGBO(225, 95, 27, .3),
+                                  blurRadius: 20,
+                                  offset: Offset(0, 10),
+                                ),
+                              ],
+                            ),
                             child: Column(
                               children: <Widget>[
                                 Container(
                                   padding: EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                      border: Border(
-                                          bottom: BorderSide(
-                                              color: Colors.grey.shade200))),
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: Colors.grey.shade200,
+                                      ),
+                                    ),
+                                  ),
                                   child: TextFormField(
                                     controller: _usuarioController,
                                     decoration: InputDecoration(
-                                        hintText: "Usuário",
-                                        hintStyle: TextStyle(color: Colors.grey),
-                                        border: InputBorder.none),
+                                      hintText: "Usuário",
+                                      hintStyle: TextStyle(color: Colors.grey),
+                                      border: InputBorder.none,
+                                    ),
                                     validator: (value) {
                                       if (value == null || value.trim().isEmpty) {
                                         return "Usuário é obrigatório!";
@@ -212,16 +228,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Container(
                                   padding: EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                      border: Border(
-                                          bottom: BorderSide(
-                                              color: Colors.grey.shade200))),
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: Colors.grey.shade200,
+                                      ),
+                                    ),
+                                  ),
                                   child: TextFormField(
                                     controller: _senhaController,
                                     obscureText: true,
                                     decoration: InputDecoration(
-                                        hintText: "Senha",
-                                        hintStyle: TextStyle(color: Colors.grey),
-                                        border: InputBorder.none),
+                                      hintText: "Senha",
+                                      hintStyle: TextStyle(color: Colors.grey),
+                                      border: InputBorder.none,
+                                    ),
                                     validator: (value) {
                                       if (value == null || value.trim().isEmpty) {
                                         return "Senha é obrigatória!";
@@ -241,9 +261,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Text(
                               _errorMessage!,
                               style: TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold),
+                                color: Colors.red,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -277,8 +298,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     child: Text(
                                       "Entrar",
                                       style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold),
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -297,8 +319,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Text(
                                 "Cadastrar",
                                 style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold),
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
@@ -308,10 +331,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-            )
-          ],
-        ),
+            ),
+          )
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
